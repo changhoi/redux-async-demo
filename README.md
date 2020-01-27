@@ -1,44 +1,97 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# React로 Redux 비동기를 동작시켜보자
 
-## Available Scripts
+새롭게 공동 창업을 시작한 이후로 개인적으로 공부하고 글 쓸 시간이 확 줄어서 계획했던 글을 쓰지를 못 하고 있다 (거창하게 JS에서 공부하기 어려웠던 부분들을 정리해보겠다고 목차만 써놨는데 공부만 하고 정리하지 못 하고 있다). 연휴를 맞아서 개인적인 시간이 남기도 하고 새로 빌딩 중인 앱에 리덕스를 붙여야 하는 상황이라 개별적으로 평소에 리덕스의 비동기를 위한 미들웨어를 공부해보려고 한다. 사실 비동기 처리를 위해서 미들웨어를 사용해야 한다는 것에 대해서 잘 이해를 못 했다. 자바스크립트는 기본적으로 비동기 처리가 간단하게 되는데 왜 비동기를 위한 미들웨어가 필요할까? 라는 생각이 들고 지금 글을 쓰는 과정에서도 그 부분을 해결하기 위한 관점이 가장 클 것 같다. 우선 프로젝트는 `CRA`를 통해 구성했다. 그리고 필요한 패키지들을 설치했다.
 
-In the project directory, you can run:
+```bash
+npx create-react-app . --typescript
 
-### `yarn start`
+yarn add react-redux redux axios styled-components
+yarn add @types/{styled-components,react-redux} -D # redux는 타입스크립트로 구성되어 있어서 설치할 필요가 없다고 함
+```
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## 리덕스를 붙이기 전
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+`screens/PostScreen`을 Container, Presenter 구조로 나눠서 api로 데이터를 받아오는 로직을 `PostScreen.tsx`에 담고, CSS와 관련된 컴포넌트들을 `Presenter.tsx`에 담도록 했다.
 
-### `yarn test`
+```tsx
+import React from "react";
+import styled from "styled-components";
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+interface IProps {
+  postList: Array<{ title: string; body: string; id: number }>;
+}
 
-### `yarn build`
+const Presenter: React.FC<IProps> = props => {
+  const { postList } = props;
+  return (
+    <Wrapper>
+      <Container>
+        {postList?.length &&
+          postList.map((post, index) => (
+            <PostDiv key={index}>
+              <div>{post.title}</div>
+              <div>{post.body}</div>
+            </PostDiv>
+          ))}
+        <PostDiv></PostDiv>
+      </Container>
+    </Wrapper>
+  );
+};
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+export default Presenter;
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+const Wrapper = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+`;
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+const Container = styled.div`
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
 
-### `yarn eject`
+const PostDiv = styled.div`
+  width: 90%;
+  height: 10rem;
+  border: 1px solid black;
+  border-radius: 5px;
+  margin: 1rem 0;
+  padding: 0.25rem;
+`;
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```tsx
+// src/screen/PostScreen.tsx
+import React, { useState, useEffect } from "react";
+import Presenter from "./Presenter";
+import Axios from "axios";
+import { ENDPOINTS } from "../../../constants";
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+const PostScreen: React.FC = props => {
+  const [postList, setPostList] = useState([]);
 
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+  const getPost = async () => {
+    const { data: postList } = await Axios.get(ENDPOINTS.GET_POSTS, {
+      baseURL: ENDPOINTS.BASE_URL
+    });
+    setPostList(postList);
+  };
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+  useEffect(() => {
+    getPost();
+  });
+  return <Presenter postList={postList} />;
+};
 
-## Learn More
+export default PostScreen;
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 리덕스 구성하기
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+위와 같은 상황에서 글 쓰기와 불러오기를 `useEffect`에 들어가는 `getPost`와 같은 형태가 아니라 모듀 리덕스를 통해 동작하도록 바꿔보자.
+`src/redux/configureStore.ts`를 만들고 아래 폴더에 `src/redux/modules/`를 만들어서 아래 리덕스 모듈들을 ducks 형태로 만들어서 전체적인 리덕스를 구성해보려고 한다.
+`src/redux/modules/post.ts`를 만들고 ducks 형태로 리덕스 모듈을 구성하자.
