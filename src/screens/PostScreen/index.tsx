@@ -1,6 +1,6 @@
 import PostScreen from "./PostScreen";
 import { connect } from "react-redux";
-import { getPost } from "../../redux/modules/post/sagaReducer";
+import { getPost } from "../../redux/modules/post/thunkReducer";
 
 const mapStateToProps = (state: any, ownProps: any) => {
   const { post } = state;

@@ -453,12 +453,6 @@ const thunk = (dispatch, getState, action) => {
 
 ## Redux-saga
 
-`saga`는 `Generator`를 기반으로 만들어져 있다. `Generator`가 뭔지, 그리고 정말 섬세한 비동기 처리를 위해서 `Generator`를 쓸 수 있다는 정도만 알고 있었지 `Generator`를 사용해본 경험이 많이 없어서 우선 `Generator`에 대해서 다시 한 번 정리 해보고 내용을 정리해보려고 한다.
-
-### Generator
-
-### Saga
-
 일단 설치먼저 해두고 문서를 또 읽어보기로 했다.
 
 ```bash
@@ -487,7 +481,7 @@ export default createStore(
 sagaMiddleware.run(rootSaga);
 ```
 
-`sagaReducer.ts`는 다음과 같이 변경되었다. `getPost` Action Creator를 붙여서 타입과 페이로드만 넘기는 형태로 바뀌었다. (기존 `thunk` 에서는 `api`를 동작시키는 함수를 호출해야 했음) 그러면서 `saga`에게는 어떤 Action Type인지에 따라서 비동기 처리를 할 것인지 말 것인지를 listen 하고 있는 형태인 것 같다. (그리고 에러 처리를 위해 FAIL이 추가됨)
+`sagaReducer.ts`는 다음과 같이 변경되었다. `getPost` Action Creator를 붙여서 타입과 페이로드만 넘기는 형태로 바뀌었다. (기존 `thunk` 에서는 `api`를 동작시키는 함수를 호출해야 했음, 그리고 에러 처리를 위해 FAIL이 추가됨) 그러면서 `saga`에게는 어떤 Action Type인지에 따라서 비동기 처리를 할 것인지 말 것인지를 listen 하고 있는 형태인 것 같다.
 
 ```ts
 import { call, put, takeEvery, all } from "redux-saga/effects";
@@ -592,8 +586,17 @@ const applyFetchPostFail = (state: any, payload: any) => {
 export default reducer;
 ```
 
+현재 프로젝트는 `src/screens/PostScreen/index.tsx`에서 `import { getPost } from "../../redux/modules/post/thunkReducer";` 이 부분만 `sagaReducer`로 바꿔주면 사가로 동작하고 `thunkReducer`로 두면 `thunk`로 동작하게 구성되어져 있다.
+
+## 후기
+
+결과적으로 프로덕트에는 `saga`를 공부해서 붙이기로 결정했다. 간단하게만 경험했지만, `saga`는 `thunk`의 +a를 많이 제공하고 있다. 단순히 `thunk`가 하는 일을 `takeEvery();`와 `call(API)` 정도로 모두 커버 가능 하면서도, 강력한 기능에 대한 예시들을 공식 문서나 advanced 자료에서 쉽게 찾아볼 수 있다는 점, 디테일한 `Helper function` 등 선택하는 것에 큰 매력을 주기도 했고, `actionCreator`를 단순하게 유지할 수 있다는 것과 동시에 재사용이 `thunk`보다는 쉽다는 점 (그냥 리슨하고 있는 제네레이터 함수일 뿐이기 때문에, 종속적이지 않게 짤 수 있다고 생각됨) 등... 두서 없이 생각해내다 보니까 계속 나오는데 강력한 기능을 경험한 다음 `saga`에 대한 글을 한 번 더 쓸 수 있으면 좋겠다.
+
 ## Reference
 
 - https://lunit.gitbook.io/redux-in-korean/advanced/asyncactions
 - https://mskims.github.io/redux-saga-in-korean/introduction/BeginnerTutorial.html
 - https://github.com/reactkr/learn-react-in-korean/blob/master/translated/deal-with-async-process-by-redux-saga.md
+- https://redux-advanced.vlpt.us/2/05.html
+- https://ko.javascript.info/generators
+- https://ko.javascript.info/async-iterators-generators
