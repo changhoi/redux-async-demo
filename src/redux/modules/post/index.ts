@@ -4,17 +4,28 @@ import { ENDPOINTS } from "../../../constants";
 
 // Action Types
 
-export const GET_POST = "GET_POST";
-export const CREATE_POST = "CREATE_POST";
+export const FETCH_POST_START = "FETCH_POST_START";
+export const FETCH_POST_END = "FETCH_POST_END";
+export const FETCHING_POST = "FETCHING_POST";
 
 // Action Creators
 
 export function getPost() {
-  return { type: GET_POST };
+  return async (dispatch: Function) => {
+    dispatch(startPost());
+    const { data: postList } = await axios.get(ENDPOINTS.GET_POSTS, {
+      baseURL: ENDPOINTS.BASE_URL
+    });
+    return dispatch(endPost(postList));
+  };
 }
 
-export function createPost(title: string, content: string) {
-  return { type: CREATE_POST, title, content };
+export function startPost() {
+  return { type: FETCH_POST_START };
+}
+
+export function endPost(postList: Array<any>) {
+  return { type: FETCH_POST_END, payload: { postList } };
 }
 
 // Initial State
@@ -31,11 +42,12 @@ export const initialState: { postList: Array<IPost>; newPost?: IPost } = {
 // Reducer
 function reducer(state = initialState, action: any) {
   switch (action.type) {
-    case GET_POST:
-      return applyGetPost();
-    case CREATE_POST:
-      const { title, body } = action as IPost & { type: string };
-      return applyCreatePost(state, title, body);
+    case FETCH_POST_END:
+      const { postList } = action.payload;
+      return applyFetchPostEnd(state, postList);
+
+    case FETCH_POST_START:
+      return applyFetchPostStart(state);
     default:
       return state;
   }
@@ -43,21 +55,16 @@ function reducer(state = initialState, action: any) {
 
 // Reducer Functions
 
-const applyGetPost = async () => {
-  const postList = await axios.get(ENDPOINTS.GET_POSTS, {
-    baseURL: ENDPOINTS.BASE_URL
-  });
-  return {
-    postList
-  };
+const applyFetchPostStart = (state: any) => {
+  return { ...state, isFetching: true };
 };
 
-const applyCreatePost = async (state: any, title: string, body: string) => {
-  const newPost = await axios.post(ENDPOINTS.GET_POSTS, {
-    baseURL: ENDPOINTS.BASE_URL,
-    body: { title, body }
-  });
-  return { ...state, newPost };
+const applyFetchPostEnd = (state: any, postList: Array<any>) => {
+  return {
+    ...state,
+    postList,
+    isFetching: false
+  };
 };
 
 // Default Reducer export

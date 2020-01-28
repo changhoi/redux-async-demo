@@ -3,16 +3,17 @@ import { connect } from "react-redux";
 import { getPost } from "../../redux/modules/post";
 
 const mapStateToProps = (state: any, ownProps: any) => {
+  const { post } = state;
   return {
     ...ownProps,
-    ...state
+    ...post
   };
 };
 
 const mapDispatchToProps = (dispatch: any, ownProps: any) => {
   return {
     ...ownProps,
-    getPost: async () => dispatch(getPost())
+    getPost: () => dispatch(getPost())
   };
 };
 

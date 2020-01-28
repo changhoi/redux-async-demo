@@ -355,4 +355,93 @@ export default PostScreen;
 
 ![](./logImage.png)
 
-스토어의 객체가 `Promise`가 된 것이다. 이것을 그냥 해결해 보려고 recursive 하게 `async` `await`으로 변경도 해봤지만 바뀌지 않았다. 아무튼 이러한 문제가 있다는 것을 알게 된 시도였다. 그러면 이제 `saga`, `thunk`를 적용해보도록 하자. 먼저 `redux` 공식 문서에서 소개하고 있는 `redux-thunk`를 먼저 도입해보자.
+스토어의 객체가 `Promise`가 된 것이다. 이것을 그냥 해결해 보려고 recursive 하게 `async` `await`으로 변경도 해봤지만 바뀌지 않았다. 아무튼 이러한 문제가 있다는 것을 알게 된 시도였다. 그러면 이제 `saga`, `thunk`를 적용해보도록 하자. 먼저 `redux` 공식 문서에서 소개하고 있는 `redux-thunk`를 먼저 도입해보자. `Action Creator` 부분도 fetching 중인지 나타내는 상태까지 관리하도록 변경했다 (공식 문서에 있는 예시에 나온 그대로) 변경된 내용은 아래와 같다.
+
+먼저 `configureStore.ts`에 `store`를 만들어서 `export default` 변경해주었다. 하는 방식으로 변경했다. 미들웨어 설정도 붙이게 되면 `App.tsx`에다가 코드를 쓰는 것보다는 여기서 코드를 완성해서 내보내는 게 더 맞는 것 같다고 생각했다.
+
+```typescript
+import { createStore, applyMiddleware, combineReducers } from "redux";
+import logger from "redux-logger";
+import thunk from "redux-thunk";
+
+import post from "./modules/post";
+
+const rootReducer = combineReducers({ post });
+
+export default createStore(rootReducer, applyMiddleware(thunk, logger)); // 두 번째 인수는 초기 상태를 지정할 수 있음
+```
+
+그리고 나서 reducer를 많이 변경 했는데, `FETCH_POST_START`와 `FETCH_POST_END`를 만들었고, `getPost`는 그냥 네트워킹 로직을 처리하는 함수가 되었다.
+
+```typescript
+...
+// Action Creators
+
+export function getPost() {
+  return async (dispatch: Function) => {
+    dispatch(startPost());
+    const { data: postList } = await axios.get(ENDPOINTS.GET_POSTS, {
+      baseURL: ENDPOINTS.BASE_URL
+    });
+    return dispatch(endPost(postList));
+  };
+}
+
+export function startPost() {
+  return { type: FETCH_POST_START };
+}
+
+export function endPost(postList: Array<any>) {
+  return { type: FETCH_POST_END, payload: { postList } };
+}
+
+...
+
+function reducer(state = initialState, action: any) {
+  switch (action.type) {
+    case FETCH_POST_END:
+      const { postList } = action.payload;
+      return applyFetchPostEnd(state, postList);
+
+    case FETCH_POST_START:
+      return applyFetchPostStart(state);
+    default:
+      return state;
+  }
+}
+
+// Reducer Functions
+
+const applyFetchPostStart = (state: any) => {
+  return { ...state, isFetching: true };
+};
+
+const applyFetchPostEnd = (state: any, postList: Array<any>) => {
+  return {
+    ...state,
+    postList,
+    isFetching: false
+  };
+};
+```
+
+작성하는 과정에서 `thunk`가 어떻게 구성되어 있는지 확인하지는 않았는데 시행 착오를 겪고 나니 대충 감이 왔다. 의사코드로 나타내면 아마도 정말 간단하게도 이런 구조가 아닐까 싶다.
+
+```typescript
+const thunk = (dispatch, getState, action) => {
+  if (typeof action === "function") {
+    return action(dispatch, getState);
+  }
+
+  return action;
+};
+```
+
+물론 미들웨어가 다음 단계로 넘어가는 구조가 어떻게 되어 있는지는 확인하지 못 해서 정교한 구조는 아니겠지만, `actionCreator`로 `dispatch(actionCreator())`가 되었을 때를 판단하게 되는 것 같다.
+
+> 궁금해서 까봤는데 코드가 아주 비슷하긴 하다. 실제로 14줄 짜리 코드라 더 놀라운데 궁금한 사람은 이 [링크](https://github.com/reduxjs/redux-thunk/blob/master/src/index.js)에서 확인해보자.
+
+## Reference
+
+- https://lunit.gitbook.io/redux-in-korean/advanced/asyncactions
+- https://github.com/reactkr/learn-react-in-korean/blob/master/translated/deal-with-async-process-by-redux-saga.md

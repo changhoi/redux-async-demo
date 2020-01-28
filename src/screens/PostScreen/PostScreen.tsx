@@ -16,8 +16,8 @@ const PostScreen: React.FC = props => {
   //   setPostList(postList);
   // };
 
-  const onClick = async () => {
-    await getPost();
+  const onClick = () => {
+    getPost();
   };
 
   return <Presenter onClick={onClick} postList={postList} />;
