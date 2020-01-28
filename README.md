@@ -116,6 +116,8 @@ const App: React.FC = () => {
 
 ## 리덕스를 붙이기 전
 
+여기서 당시 [코드](https://github.com/changhoi/redux-async-demo/tree/8865f428bc77232c46061dd6efb828a2c28ae269)를 확인할 수 있다.
+
 `screens/PostScreen`을 Container, Presenter 구조로 나눠서 api로 데이터를 받아오는 로직을 `PostScreen.tsx`에 담고, CSS와 관련된 컴포넌트들을 `Presenter.tsx`에 담도록 했다.
 
 ```tsx
@@ -196,6 +198,8 @@ export default PostScreen;
 ```
 
 ## 리덕스 구성하기
+
+이 [링크](https://github.com/changhoi/redux-async-demo/tree/4f145bca9bf90cab4500177185d60c2780d9cd40)에서 이 챕터까지 진행한 코드를 확인할 수 있다.
 
 위와 같은 상황에서 글 쓰기와 불러오기를 `useEffect`에 들어가는 `getPost`와 같은 형태가 아니라 모듀 리덕스를 통해 동작하도록 바꿔보자.
 `src/redux/configureStore.ts`를 만들고 아래 폴더에 `src/redux/modules/`를 만들어서 아래 리덕스 모듈들을 ducks 형태로 만들어서 전체적인 리덕스를 구성해보려고 한다.
@@ -359,6 +363,8 @@ export default PostScreen;
 
 ## Redux thunk
 
+이 [링크](https://github.com/changhoi/redux-async-demo/tree/2f323144d76c20fc019c39dab37b6e8323d6c879)에서 `thunk`로 문제를 해결한 다음 코드를 확인할 수 있다.
+
 일단 미들웨어를 설치해보자
 
 ```bash
@@ -452,6 +458,8 @@ const thunk = (dispatch, getState, action) => {
 > 궁금해서 까봤는데 코드가 아주 비슷하긴 하다. 실제로 14줄 짜리 코드라 더 놀라운데 궁금한 사람은 이 [링크](https://github.com/reduxjs/redux-thunk/blob/master/src/index.js)에서 확인해보자.
 
 ## Redux-saga
+
+[여기](https://github.com/changhoi/redux-async-demo/tree/36a5a3988b019f6cf8d81506fa74f298a78953cd)서 마지막으로 해결한 상태의 코드를 확인해볼 수 있다.
 
 일단 설치먼저 해두고 문서를 또 읽어보기로 했다.
 
@@ -586,7 +594,7 @@ const applyFetchPostFail = (state: any, payload: any) => {
 export default reducer;
 ```
 
-현재 프로젝트는 `src/screens/PostScreen/index.tsx`에서 `import { getPost } from "../../redux/modules/post/thunkReducer";` 이 부분만 `sagaReducer`로 바꿔주면 사가로 동작하고 `thunkReducer`로 두면 `thunk`로 동작하게 구성되어져 있다.
+현재 프로젝트는 `src/screens/PostScreen/index.tsx`에서 `import { getPost } from "../../redux/modules/post/thunkReducer";` 이 부분만 `sagaReducer`로 바꿔주면 사가로 동작하고 `thunkReducer`로 두면 `thunk`로 동작하게 구성되어져 있다. 최종적인 프로젝트는 이 [링크](https://github.com/changhoi/redux-async-demo)에서 확인할 수 있다.
 
 ## 후기
 
