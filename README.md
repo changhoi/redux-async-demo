@@ -355,7 +355,17 @@ export default PostScreen;
 
 ![](./logImage.png)
 
-스토어의 객체가 `Promise`가 된 것이다. 이것을 그냥 해결해 보려고 recursive 하게 `async` `await`으로 변경도 해봤지만 바뀌지 않았다. 아무튼 이러한 문제가 있다는 것을 알게 된 시도였다. 그러면 이제 `saga`, `thunk`를 적용해보도록 하자. 먼저 `redux` 공식 문서에서 소개하고 있는 `redux-thunk`를 먼저 도입해보자. `Action Creator` 부분도 fetching 중인지 나타내는 상태까지 관리하도록 변경했다 (공식 문서에 있는 예시에 나온 그대로) 변경된 내용은 아래와 같다.
+스토어의 객체가 `Promise`가 된 것이다. 이것을 그냥 해결해 보려고 recursive 하게 `async` `await`으로 변경도 해봤지만 바뀌지 않았다. 아무튼 이러한 문제가 있다는 것을 알게 된 시도였다.
+
+## Redux thunk
+
+일단 미들웨어를 설치해보자
+
+```bash
+yarn add redux-thunk
+```
+
+그러면 이제 `saga`, `thunk`를 적용해보도록 하자. 먼저 `redux` 공식 문서에서 소개하고 있는 `redux-thunk`를 먼저 도입해보자. `Action Creator` 부분도 fetching 중인지 나타내는 상태까지 관리하도록 변경했다 (공식 문서에 있는 예시에 나온 그대로) 변경된 내용은 아래와 같다.
 
 먼저 `configureStore.ts`에 `store`를 만들어서 `export default` 변경해주었다. 하는 방식으로 변경했다. 미들웨어 설정도 붙이게 되면 `App.tsx`에다가 코드를 쓰는 것보다는 여기서 코드를 완성해서 내보내는 게 더 맞는 것 같다고 생각했다.
 
@@ -441,7 +451,149 @@ const thunk = (dispatch, getState, action) => {
 
 > 궁금해서 까봤는데 코드가 아주 비슷하긴 하다. 실제로 14줄 짜리 코드라 더 놀라운데 궁금한 사람은 이 [링크](https://github.com/reduxjs/redux-thunk/blob/master/src/index.js)에서 확인해보자.
 
+## Redux-saga
+
+`saga`는 `Generator`를 기반으로 만들어져 있다. `Generator`가 뭔지, 그리고 정말 섬세한 비동기 처리를 위해서 `Generator`를 쓸 수 있다는 정도만 알고 있었지 `Generator`를 사용해본 경험이 많이 없어서 우선 `Generator`에 대해서 다시 한 번 정리 해보고 내용을 정리해보려고 한다.
+
+### Generator
+
+### Saga
+
+일단 설치먼저 해두고 문서를 또 읽어보기로 했다.
+
+```bash
+yarn add redux-saga
+```
+
+사가 문서를 읽어보면 사이드 이펙트를 쉽게 관리해준다고 표현되어있다. 특히 여러 글에서 실패하는 경우 마치 트랜젝션이 가능한 것처럼 표현하는 글을 한 두 번 본 기억이 있다. 사가는 리덕스의 함수형 프로그래밍적인 특성을 그대로 유지하고 (순수 함수, 상태 변경을 action으로만 등), 비동기적인 로직을 사가에서 맡아서 처리하도록 한다. 여기서 맡아서 처리하도록 한다를 `Generator`를 사용하도록 만들어져있다. 기본적으로 `Generator`는 실행 맥락을 함수 중간 중간 떠넘길 수 있도록 구성할 수 있기 때문에 이러한 투트랙 느낌의 비동기 처리가 가능한 것 같다. 아주 Advanced한 경우는 아직 확인해보지 못 했지만, 위와 같은 간단한 예시를 구성하는 것 자체는 크게 어렵지 않았다. 우선 `thunk` 미들웨어를 `saga` 미들웨어로 교체했다. (기존에 `src/redux/modules/post` 아래를 `thunkReducer.ts`, `sagaReducer.ts`로 나눴다.)
+
+```ts
+// src/redux/configureStore.ts
+
+import { createStore, applyMiddleware, combineReducers } from "redux";
+import logger from "redux-logger";
+import createSagaMiddleware from "redux-saga";
+import post, { rootSaga } from "./modules/post/sagaReducer";
+
+const sagaMiddleware = createSagaMiddleware();
+
+const rootReducer = combineReducers({ post });
+
+export default createStore(
+  rootReducer,
+  applyMiddleware(sagaMiddleware, logger)
+); // 두 번째 인수는 초기 상태를 지정할 수 있음
+
+sagaMiddleware.run(rootSaga);
+```
+
+`sagaReducer.ts`는 다음과 같이 변경되었다. `getPost` Action Creator를 붙여서 타입과 페이로드만 넘기는 형태로 바뀌었다. (기존 `thunk` 에서는 `api`를 동작시키는 함수를 호출해야 했음) 그러면서 `saga`에게는 어떤 Action Type인지에 따라서 비동기 처리를 할 것인지 말 것인지를 listen 하고 있는 형태인 것 같다. (그리고 에러 처리를 위해 FAIL이 추가됨)
+
+```ts
+import { call, put, takeEvery, all } from "redux-saga/effects";
+import axios from "axios";
+import { ENDPOINTS } from "../../../constants";
+
+// Action Types
+
+export const FETCH_POST_FAIL = "FETCH_POST_FAIL";
+export const FETCH_POST_START = "FETCH_POST_START";
+export const FETCH_POST_END = "FETCH_POST_END";
+export const FETCHING_POST = "FETCHING_POST";
+
+// Saga
+
+const fetchPost = () =>
+  axios.get(ENDPOINTS.GET_POSTS, { baseURL: ENDPOINTS.BASE_URL });
+
+function* fetchPostList() {
+  try {
+    const { data: postList } = yield call(fetchPost);
+    yield put({ type: FETCH_POST_END, payload: { postList } });
+  } catch (e) {
+    yield put({ type: FETCH_POST_FAIL, payload: e });
+  }
+}
+
+function* postSaga() {
+  yield takeEvery(FETCHING_POST, fetchPostList);
+}
+
+export function* rootSaga() {
+  yield all([postSaga()]);
+}
+
+// Action Creators
+
+export function getPost() {
+  return { type: FETCHING_POST };
+}
+
+export function startPost() {
+  return { type: FETCH_POST_START };
+}
+
+export function endPost(postList: Array<any>) {
+  return { type: FETCH_POST_END, payload: { postList } };
+}
+
+// Initial State
+
+interface IPost {
+  title: string;
+  body: string;
+}
+
+export const initialState: { postList: Array<IPost>; newPost?: IPost } = {
+  postList: []
+};
+
+// Reducer
+function reducer(state = initialState, action: any) {
+  switch (action.type) {
+    case FETCH_POST_END:
+      const { postList } = action.payload;
+      return applyFetchPostEnd(state, postList);
+
+    case FETCH_POST_START:
+      return applyFetchPostStart(state);
+
+    case FETCH_POST_FAIL:
+      return applyFetchPostFail(state, action.payload);
+    default:
+      return state;
+  }
+}
+
+// Reducer Functions
+
+const applyFetchPostStart = (state: any) => {
+  return { ...state, isFetching: true };
+};
+
+const applyFetchPostEnd = (state: any, postList: Array<any>) => {
+  return {
+    ...state,
+    postList,
+    isFetching: false
+  };
+};
+
+const applyFetchPostFail = (state: any, payload: any) => {
+  const error = { title: payload.message, body: JSON.stringify(payload.stack) };
+  state.postList.push(error);
+  return {
+    ...state
+  };
+};
+
+// Default Reducer export
+
+export default reducer;
+```
+
 ## Reference
 
 - https://lunit.gitbook.io/redux-in-korean/advanced/asyncactions
+- https://mskims.github.io/redux-saga-in-korean/introduction/BeginnerTutorial.html
 - https://github.com/reactkr/learn-react-in-korean/blob/master/translated/deal-with-async-process-by-redux-saga.md
