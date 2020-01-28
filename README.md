@@ -9,6 +9,111 @@ yarn add react-redux redux axios styled-components
 yarn add @types/{styled-components,react-redux} -D # redux는 타입스크립트로 구성되어 있어서 설치할 필요가 없다고 함
 ```
 
+## Redux에 대해서
+
+리덕스는 너무나 유명한 상태 관리 시스템이다. 상태 관리는 React 프로젝트에서 너무나 필요한 기능이지만, 리덕스라는 개념은 정확하게는 리액트에서만 통용되는 것은 아니고, 그냥 말 그대로 상태를 관리하도록 돕는 일종의 시스템이다. [리덕스를 소개하는 페이지](https://redux.js.org)에서는 리덕스의 중요 원칙을 세 가지로 정리했다.
+
+1. Single source of truth
+   애플리케이션의 모든 상태는 하나의 스토어 안에 하나의 객체 트리 구조로 저장된다는 의미인데. 디버깅이 쉽고, 여러 곳에서 상태를 관리하지 않아도 된다는 것을 의미한다.
+
+2. State is read-only
+   애플리케이션의 상태는 항상 읽기 전용이고, 상태를 객체를 직접 조작함으로써 변경할 수 없다는 것을 의미한다. 상태를 변화시키기 위해서는 어떤 일이 발생할지 기술된 `Action`을 전달하는 것이 유일한 방법이 되어야 한다는 것이다.
+
+3. Changes are made with pure functions
+   `Action`을 통해 생기는 변화는 순수 함수를 통해서 이루어져야 한다는 의미이다. 이때 변화를 만드는 함수를 리듀서라고 하는데 이 리듀서는 이전 `state`를 받고 이전 `state`와는 독립적인 새로운 `state`를 반환해야 한다.
+
+이 세 가지가 리덕스의 원칙이고, 이 원칙 마지막에 리덕스를 모두 알게 된 것이라고 말한다(?). 사용하다 보면 대충 알게 되지만 엄밀히 틀린 말은 아니라고 생각 되었다. 우리는 상태(`state`)가 있고, 이를 특정 `action`을 `dispatcher`에게 전달 함으로써 다음 상태로 변경시키는 과정을 리듀서로 적용해서 실제로 상태를 변경시키는 것을 리덕스가 하는 역할이라고 볼 수 있다. 풀어서 쓰다 보니 오히려 비문이 되긴 했지만, 간단한 원리.
+
+```
+1.
+[STATE]
+
+2.
+dispatch(action) -> reducer(action, STATE) => NEWSTATE -> STATE = NEWSTATE
+```
+
+### Action
+
+`Action`은 애플리케이션에서 스토어로 보내는 데이터 묶음이다. 위 도식에서 볼 수 있듯, `dispatch({type: GET_POST})` 처럼 `dispatch`를 통해 전달할 수 있다. 타입 말고 다른 데이터 들도 넘길 수 있다. 타입은 반드시 필요하고, 나머지는 마음대로지만, 넘겨야 하는 데이터가 적을 수록 좋다고 한다.
+
+### Action Creator
+
+`Action Creator`는 이름 그대로 액션을 만들어내는 주체이다. 만들어내는 행위는 당연 함수가 하겠지. `Action Creator`의 존재는 사실 함수형 프로그래밍의 원칙을 위해 만들어진 개념이 아닌가 싶었다. 대충 예시는 다음과 같다.
+
+```typescript
+function getPost(id: number) {
+  return {
+    type: GET_POST,
+    id
+  };
+}
+
+dispatch(getPost(id));
+```
+
+### Reducer
+
+리듀서는 액션에 따라서 스토어의 상태를 변화시키는 함수이다. 이전 상태와 `action`을 받아서 새로운 `state`를 내보내기만 하면 역할은 완료이다. 여러 `action`들이 있기 때문에 보통 리듀서는 `switch` 문으로 작성되게 된다.
+
+### Reducer function
+
+이 부분은 사실 분리 하는 사람도 있고 아닌 사람도 있겠지만, 함수의 Depth가 깊어지는 것을 막고 싶기 때문에 추가한다. 쉽게 말해서 리듀서가 어떻게 동작할지를 따로 분리시키는 것이다.
+
+```typescript
+...
+export default function reducer(state = initalState, action = {}) {
+  switch (action.type) {
+    case CREATE_POST:
+      // 이부분에 해당하는 걸 함수로 나눠준다.
+      applyCreatePost(state, action)
+      break;
+      ...
+    default: return state;
+  }
+}
+...
+
+const applyCreatePost = (state, action) => {
+  ...
+}
+```
+
+### Store
+
+스토어에서는 애플리케이션의 상태를 저장하고, `getState()`를 통해서 상태에 접근하게 하고, `dispatch(aciton)`을 통해 상태를 수정할 수 있게 하고, `subscribe(listener)`를 통해 리스너를 등록한다. `createStore()`를 통해서 스토어를 만들 수 있다. `createStore(app, initialState)` 같은 형태로 사용된다.
+
+### react-redux
+
+리액트의 경우에 스토어를 모든 컴포넌트에서 불러올 수 있도록 하기 위해서 `Provider`를 제공해주는 `react-redux` 패키지가 존재한다. 아래와 같이 hoc 패턴으로 스토어를 제공한다.
+
+```tsx
+...
+import {Provider} from 'react-redux';
+
+const App: React.FC = () => {
+  return (
+    <Provider store={store}>
+      <PostScreen />
+    </Provider>
+  );
+};
+```
+
+그리고 컴포넌트의 `props`에 `store`와 `dispatch` 함수를 넣기 위해서 `connect` 함수를 제공한다.
+
+## Redux ducks 패턴
+
+리덕스 앱을 구축하는 과정에서, 리덕스의 여러가지 부분을 파일로 분할하게 되면 여러 파일을 수정해야 하는 경우가 생기기 때문에 그러한 경우를 방지하기 위해 단순하게 하나의 파일에 reducer가 만들어지도록 하는 패턴이다. 규칙은 다음과 같다.
+
+하나의 모듈은
+
+1. **항상** `reducer`라는 이름의 함수를 `export default` 해야 한다.
+2. **항상** 모듈의 `actionCreator`를 함수 형태로 `export` 해야 한다.
+3. **항상** `npm-module-or-app/reducer/ACTION_TYPE` 형태의 `actionType`을 가져와야 한다.
+4. **어쩌면** `actionType`을 `UPPER_SNAKE_CASE`로 `export` 할 수 있다. 만약 외부 `reducer`가 해당 `action`이 발생하는지를 기다리거나, 재사용할 수 있는 라이브러리로 퍼블리싱 할 경우에
+
+간단하게 비동기를 진행하기 전까지의 원칙과 사용 방법 등을 간단하게 정리했다. 그러면 리덕스를 붙이기 전 리액트 앱을 만들고, 리덕스를 붙이는 방식으로 바꾼 다음 비동기를 작성해보고 어떤 문제가 있고, 이 문제를 해결하기 위해서 가장 유명하다는 `react-thunk` 또는 `react-saga`를 도입해보자
+
 ## 리덕스를 붙이기 전
 
 `screens/PostScreen`을 Container, Presenter 구조로 나눠서 api로 데이터를 받아오는 로직을 `PostScreen.tsx`에 담고, CSS와 관련된 컴포넌트들을 `Presenter.tsx`에 담도록 했다.
@@ -95,3 +200,159 @@ export default PostScreen;
 위와 같은 상황에서 글 쓰기와 불러오기를 `useEffect`에 들어가는 `getPost`와 같은 형태가 아니라 모듀 리덕스를 통해 동작하도록 바꿔보자.
 `src/redux/configureStore.ts`를 만들고 아래 폴더에 `src/redux/modules/`를 만들어서 아래 리덕스 모듈들을 ducks 형태로 만들어서 전체적인 리덕스를 구성해보려고 한다.
 `src/redux/modules/post.ts`를 만들고 ducks 형태로 리덕스 모듈을 구성하자.
+
+```typescript
+// src/redux/modules.post.ts
+// imports
+import axios from "axios";
+import { ENDPOINTS } from "../../../constants";
+
+// Action Types
+
+export const GET_POST = "GET_POST";
+export const CREATE_POST = "CREATE_POST";
+
+// Action Creators
+
+export function getPost() {
+  return { type: GET_POST };
+}
+
+export function createPost(title: string, content: string) {
+  return { type: CREATE_POST, title, content };
+}
+
+// Initial State
+
+interface IPost {
+  title: string;
+  body: string;
+}
+
+export const initialState: { postList: Array<IPost>; newPost?: IPost } = {
+  postList: []
+};
+
+// Reducer
+function reducer(state = initialState, action: any) {
+  switch (action.type) {
+    case GET_POST:
+      return applyGetPost();
+    case CREATE_POST:
+      const { title, body } = action as IPost & { type: string };
+      return applyCreatePost(state, title, body);
+    default:
+      return state;
+  }
+}
+
+// Reducer Functions
+
+const applyGetPost = async () => {
+  const postList = await axios.get(ENDPOINTS.GET_POSTS, {
+    baseURL: ENDPOINTS.BASE_URL
+  });
+  return {
+    postList
+  };
+};
+
+const applyCreatePost = async (state: any, title: string, body: string) => {
+  const newPost = await axios.post(ENDPOINTS.GET_POSTS, {
+    baseURL: ENDPOINTS.BASE_URL,
+    body: { title, body }
+  });
+  return { ...state, newPost };
+};
+
+// Default Reducer export
+
+export default reducer;
+```
+
+`useEffect`에서 했던 것을 비동기 망한 예시를 위해 모두 `reducer`로 작성했다. 작성하면서 비동기로 하면 왜 안될 것 같은지를 깨닫게 되었지만 일단 진행해보자. 아래는 `configureStore`파일이고, 가장 상위 App에 store를 보내는 것으로 수정했다.
+
+```typescript
+// src/redux/configureStore.ts
+import { combineReducers } from "redux";
+
+import post from "./modules/post";
+
+export default combineReducers({ post });
+```
+
+```tsx
+// src/App.tsx
+...
+
+const store = createStore(rootReducer, applyMiddleware(logger)); // 두 번째 인수는 초기 상태를 지정할 수 있음
+
+const App: React.FC = () => {
+  return (
+    <Provider store={store}>
+      <PostScreen />
+    </Provider>
+  );
+};
+```
+
+그러고 나서 실제 스크린에서 사용할 수 있게 props로 dispatch 하는 함수와 store의 state를 넘겨주었다.
+
+```tsx
+import PostScreen from "./PostScreen";
+import { connect } from "react-redux";
+import { getPost } from "../../redux/modules/post";
+
+const mapStateToProps = (state: any, ownProps: any) => {
+  return {
+    ...ownProps,
+    ...state
+  };
+};
+
+const mapDispatchToProps = (dispatch: any, ownProps: any) => {
+  return {
+    ...ownProps,
+    getPost: async () => dispatch(getPost())
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(PostScreen);
+```
+
+컨테이너에 해당하는 `PostScreen.tsx`는 아래와 같이 수정했다. `useEffect`를 없애고 클릭하면 스토어가 업데이트 되도록 변경한 모습이다.
+
+```tsx
+import React from "react";
+import Presenter from "./Presenter";
+
+interface IProps {
+  getPost: Function;
+  postList: Array<any>;
+}
+
+const PostScreen: React.FC = props => {
+  const { postList, getPost } = props as IProps;
+
+  // const getPost = async () => {
+  //   const { data: postList } = await Axios.get(ENDPOINTS.GET_POSTS, {
+  //     baseURL: ENDPOINTS.BASE_URL
+  //   });
+  //   setPostList(postList);
+  // };
+
+  const onClick = async () => {
+    await getPost();
+  };
+
+  return <Presenter onClick={onClick} postList={postList} />;
+};
+
+export default PostScreen;
+```
+
+결과적으로 가져오기 버튼을 클릭하면 스토어의 모습이 다음과 같이 변한다.
+
+![](./logImage.png)
+
+스토어의 객체가 `Promise`가 된 것이다. 이것을 그냥 해결해 보려고 recursive 하게 `async` `await`으로 변경도 해봤지만 바뀌지 않았다. 아무튼 이러한 문제가 있다는 것을 알게 된 시도였다. 그러면 이제 `saga`, `thunk`를 적용해보도록 하자. 먼저 `redux` 공식 문서에서 소개하고 있는 `redux-thunk`를 먼저 도입해보자.

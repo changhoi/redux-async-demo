@@ -1,25 +1,28 @@
-import React from "react";
+import React, { MouseEventHandler } from "react";
 import styled from "styled-components";
 
 interface IProps {
   postList: Array<{ title: string; body: string; id: number }>;
+  onClick: MouseEventHandler;
 }
 
 const Presenter: React.FC<IProps> = props => {
-  const { postList } = props;
+  const { postList, onClick } = props;
   return (
-    <Wrapper>
-      <Container>
-        {postList?.length &&
-          postList.map((post, index) => (
-            <PostDiv key={index}>
-              <div>{post.title}</div>
-              <div>{post.body}</div>
-            </PostDiv>
-          ))}
-        <PostDiv></PostDiv>
-      </Container>
-    </Wrapper>
+    <>
+      <button onClick={onClick}>가져오기</button>
+      <Wrapper>
+        <Container>
+          {postList?.length &&
+            postList.map((post, index) => (
+              <PostDiv key={index}>
+                <div>{post.title}</div>
+                <div>{post.body}</div>
+              </PostDiv>
+            ))}
+        </Container>
+      </Wrapper>
+    </>
   );
 };
 
